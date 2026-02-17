@@ -7,7 +7,7 @@ use glium::glutin::surface::WindowSurface;
 use glium::Surface;
 use crate::opengl::{self, OpenGlinterface};
 use std::time::{Duration, Instant};
-
+use crate::opengl::{render_generated_texture};
 #[derive(Default)]
 pub struct App<'a> {
     pub window: Option<Window>,
@@ -15,6 +15,7 @@ pub struct App<'a> {
     pub render_surface: Option<glium::Display<WindowSurface>>,
     pub frame_duration: Option<Duration>,
     pub init_time: Option<Instant>,
+    pub frame_counter: Option<u8>,
 }
 
 
@@ -34,20 +35,18 @@ impl<'a> ApplicationHandler for App<'a> {
                 if let Some(display) = self.render_surface.as_ref()
                     &&
                     let Some(window) = self.window.as_ref()
-                    &&
-                    let Some(elapsed) = self.init_time.as_ref()
                     {
                     // --- ГЛОБАЛЬНЫЙ ЦИКЛ РИСОВАНИЯ ---
                     let mut target = display.draw(); // Создаем фрейм
 
                     // Очищаем экран цветом (ваш код с sin)
-                    let elapsed = elapsed.elapsed().as_secs_f32();
-                    target.clear_color(0.1, elapsed.sin().abs(), 0.4, 1.0);
+                    // Очищаем фон
+                    target.clear_color(0.0, 0.0, 0.0, 1.0);
 
-                    // Здесь будет ваш код отрисовки шейдеров/треугольников
+                    // ВЫЗОВ НАШЕЙ ФУНКЦИИ
+                    render_generated_texture(display, &mut target);
 
-                    target.finish().unwrap(); // Свапаем буферы (выводим на экран)
-
+                    target.finish().unwrap();
 
                     if let Some(frame_duration) = self.frame_duration {
                         let next_frame_time = Instant::now() + frame_duration;
@@ -86,11 +85,10 @@ mod tests {
         app.frame_duration = Some(Duration::from_millis(1000 / 60 as u64));
         app.render_surface = Some(display);
         app.init_time = Some(Instant::now());
+        app.frame_counter = Some(0);
 
         event_loop.run_app(&mut app).unwrap();
 
         manual_test("Появилось ли окно приложения?", "интерфейс создания приложения, окна");
     }
 }
-
-
