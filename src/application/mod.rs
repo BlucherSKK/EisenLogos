@@ -1,13 +1,22 @@
+use glium::Display;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
+use glium::glutin::surface::WindowSurface;
+use glium::Surface;
+use crate::opengl::{self, OpenGlinterface};
+use std::time::{Duration, Instant};
 
 #[derive(Default)]
-struct App<'a> {
-    window: Option<Window>,
-    title: &'a str,
+pub struct App<'a> {
+    pub window: Option<Window>,
+    pub title: &'a str,
+    pub render_surface: Option<glium::Display<WindowSurface>>,
+    pub frame_duration: Option<Duration>,
+    pub init_time: Option<Instant>,
 }
+
 
 impl<'a> ApplicationHandler for App<'a> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
@@ -19,12 +28,37 @@ impl<'a> ApplicationHandler for App<'a> {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                println!("The close button was pressed; stopping");
                 event_loop.exit();
             },
             WindowEvent::RedrawRequested => {
-                if let Some(window) = self.window.as_ref() {
-                    // main render line
+                if let Some(display) = self.render_surface.as_ref()
+                    &&
+                    let Some(window) = self.window.as_ref()
+                    &&
+                    let Some(elapsed) = self.init_time.as_ref()
+                    {
+                    // --- ГЛОБАЛЬНЫЙ ЦИКЛ РИСОВАНИЯ ---
+                    let mut target = display.draw(); // Создаем фрейм
+
+                    // Очищаем экран цветом (ваш код с sin)
+                    let elapsed = elapsed.elapsed().as_secs_f32();
+                    target.clear_color(0.1, elapsed.sin().abs(), 0.4, 1.0);
+
+                    // Здесь будет ваш код отрисовки шейдеров/треугольников
+
+                    target.finish().unwrap(); // Свапаем буферы (выводим на экран)
+
+
+                    if let Some(frame_duration) = self.frame_duration {
+                        let next_frame_time = Instant::now() + frame_duration;
+
+                        event_loop.set_control_flow(ControlFlow::WaitUntil(next_frame_time));
+                    } else {
+                        // Если ограничений нет — рисуем максимально быстро
+                        event_loop.set_control_flow(ControlFlow::Poll);
+                    }
+
+                    // Важно: запрашиваем перерисовку снова
                     window.request_redraw();
                 }
             }
@@ -33,18 +67,30 @@ impl<'a> ApplicationHandler for App<'a> {
     }
 }
 
-fn main() {
-    let event_loop = EventLoop::new().unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test::{ manual_test};
 
-    // ControlFlow::Poll continuously runs the event loop, even if the OS hasn't
-    // dispatched any events. This is ideal for games and similar applications.
-    event_loop.set_control_flow(ControlFlow::Poll);
+    #[test]
+    fn test_rendering() {
 
-    // ControlFlow::Wait pauses the event loop if no events are available to process.
-    // This is ideal for non-game applications that only update in response to user
-    // input, and uses significantly less power/CPU time than ControlFlow::Poll.
-    event_loop.set_control_flow(ControlFlow::Wait);
+        let event_loop = EventLoop::new().unwrap();
 
-    let mut app = App::default();
-    event_loop.run_app(&mut app);
+        event_loop.set_control_flow(ControlFlow::Poll);
+        let (_window, display) = glium::backend::glutin::SimpleWindowBuilder::new()
+                .with_title("OpenGL FPS Limit")
+                .build(&event_loop);
+
+        let mut app = App::default();
+        app.frame_duration = Some(Duration::from_millis(1000 / 60 as u64));
+        app.render_surface = Some(display);
+        app.init_time = Some(Instant::now());
+
+        event_loop.run_app(&mut app).unwrap();
+
+        manual_test("Появилось ли окно приложения?", "интерфейс создания приложения, окна");
+    }
 }
+
+
