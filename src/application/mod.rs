@@ -5,9 +5,8 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use glium::glutin::surface::WindowSurface;
 use glium::Surface;
-use crate::opengl::{self, OpenGlinterface};
 use std::time::{Duration, Instant};
-use crate::opengl::{render_generated_texture};
+use crate::opengl::{self, render_generated_texture};
 #[derive(Default)]
 pub struct App<'a> {
     pub window: Option<Window>,
@@ -15,7 +14,7 @@ pub struct App<'a> {
     pub render_surface: Option<glium::Display<WindowSurface>>,
     pub frame_duration: Option<Duration>,
     pub init_time: Option<Instant>,
-    pub frame_counter: Option<u8>,
+    pub images: Option<Vec<&'a str>>
 }
 
 
@@ -44,7 +43,7 @@ impl<'a> ApplicationHandler for App<'a> {
                     target.clear_color(0.0, 0.0, 0.0, 1.0);
 
                     // ВЫЗОВ НАШЕЙ ФУНКЦИИ
-                    render_generated_texture(display, &mut target);
+                    opengl::
 
                     target.finish().unwrap();
 
@@ -85,7 +84,6 @@ mod tests {
         app.frame_duration = Some(Duration::from_millis(1000 / 60 as u64));
         app.render_surface = Some(display);
         app.init_time = Some(Instant::now());
-        app.frame_counter = Some(0);
 
         event_loop.run_app(&mut app).unwrap();
 

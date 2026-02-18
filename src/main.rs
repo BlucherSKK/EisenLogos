@@ -10,7 +10,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 use glium::glutin::surface::WindowSurface;
-use crate::opengl::{OpenGlinterface};
+
 
 
 fn main() {
